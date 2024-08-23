@@ -1,0 +1,62 @@
+## Cluster 0
+- Absol
+- Aegislash
+- Alolan Ninetales
+- Azumarill
+- Blastoise
+- Blaziken
+- Blissey
+- Buzzwole
+- Chandelure
+- Charizard
+- Cinderace
+- Clefable
+- Comfey
+- Cramorant
+- Crustle
+- Decidueye
+- Delphox
+- Dodrio
+- Dragapult
+- Dragonite
+- Duraludon
+- Eldegoss
+- Espeon
+- Garchomp
+- Gardevoir
+- Gengar
+- Glaceon
+- Goodra
+- Greedent
+- Greninja
+- Hoopa
+- Inteleon
+- Lapras
+- Leafeon
+- Lucario
+- Machamp
+- Mamoswine
+- Meowscarada
+- Mew
+- Mewtwo X
+- Mewtwo Y
+- Mimikyu
+- Mr. Mime
+- Pikachu
+- Sableye
+- Scizor
+- Slowbro
+- Snorlax
+- Sylveon
+- Talonflame
+- Trevenant
+- Tsareena
+- Tyranitar
+- Umbreon
+- Urshifu
+- Venusaur
+- Wigglytuff
+- Zacian
+- Zeraora
+- Zoroark
+
