@@ -25,8 +25,8 @@
             .attr("transform", `translate(${width/2},${height/2})`);
 
         const scale = d3.scaleLinear()
-            .domain([-20, 20])
-            .range([-height/2, height/2]);
+            .domain([-10, 10])
+            .range([-height, height]);
 
         let points;
         let rotation = [0, 0];
