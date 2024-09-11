@@ -6,84 +6,129 @@
     <title>3D Pokémon Graph</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { margin: 0; overflow: hidden; touch-action: none; }
         #container { width: 100vw; height: 100vh; }
+        .axis-line { stroke: rgba(0, 0, 0, 0.2); stroke-width: 1.5; }
+        .axis-label { fill: rgba(0, 0, 0, 0.4); font-size: 10px; }
+        .controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .control-button {
+            margin: 5px;
+            padding: 5px 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #image-size-control {
+            width: 100px;
+        }
     </style>
 </head>
 <body>
     <div id="container"></div>
+    <div class="controls">
+        <button id="zoom-in" class="control-button">Zoom In</button>
+        <button id="zoom-out" class="control-button">Zoom Out</button>
+        <input type="range" id="image-size-control" min="10" max="100" value="50">
+    </div>
     <script>
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-
-        const svg = d3.select("#container")
-            .append("svg")
-            .attr("width", width)
-            .attr("height", height);
-
-        const g = svg.append("g")
-            .attr("transform", `translate(${width/2},${height/2})`);
-
-        const scale = d3.scaleLinear()
-            .domain([-300, 300])
-            .range([-height, height]);
-
-        let points;
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let scale, svg, g, points;
         let rotation = [0, 0];
+        let translation = [0, 0];
+        let zoomLevel = 1;
+        let imageSize = 50;
 
-        // Load data from CSV file
-        d3.csv("data1.csv").then(data => {
-            // Convert string values to numbers
-            data.forEach(d => {
-                d.x = +d.x;
-                d.y = +d.y;
-                d.z = +d.z;
-            });
+        function initializeGraph() {
+            d3.select("#container").selectAll("*").remove();
 
-            points = g.selectAll("g")
-                .data(data)
-                .enter()
-                .append("g")
-                .attr("class", "point");
-            points.append("image")
+            svg = d3.select("#container")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            g = svg.append("g")
+                .attr("transform", `translate(${width/2},${height/2})`);
+
+            updateScale();
+
+            // Add axes
+            const axisLength = scale(30) - scale(0);
+            const axes = g.append("g").attr("class", "axes");
             
-                .attr("xlink:href", d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`)
-                .attr("width", 50)
-                .attr("height", 50)
-                .attr("x", -25)
-                .attr("y", -25);
+            // X-axis
+            axes.append("line")
+                .attr("class", "axis-line")
+                .attr("x1", -axisLength).attr("y1", 0)
+                .attr("x2", axisLength).attr("y2", 0);
+            axes.append("text")
+                .attr("class", "axis-label")
+                .attr("x", axisLength + 5).attr("y", 3)
+                .text("X");
 
-            updatePositions();
-            setupDragBehavior();
-        }).catch(error => {
-            console.error("Error loading the CSV file:", error);
-        });
+            // Y-axis
+            axes.append("line")
+                .attr("class", "axis-line")
+                .attr("x1", 0).attr("y1", -axisLength)
+                .attr("x2", 0).attr("y2", axisLength);
+            axes.append("text")
+                .attr("class", "axis-label")
+                .attr("x", 3).attr("y", -axisLength - 5)
+                .text("Y");
+
+            // Z-axis
+            axes.append("line")
+                .attr("class", "axis-line")
+                .attr("x1", 0).attr("y1", 0)
+                .attr("x2", axisLength * Math.cos(Math.PI/4)).attr("y2", -axisLength * Math.sin(Math.PI/4));
+            axes.append("text")
+                .attr("class", "axis-label")
+                .attr("x", axisLength * Math.cos(Math.PI/4) + 5)
+                .attr("y", -axisLength * Math.sin(Math.PI/4) - 5)
+                .text("Z");
+        }
+
+        function updateScale() {
+            scale = d3.scaleLinear()
+                .domain([-50 / zoomLevel, 50 / zoomLevel])
+                .range([-Math.min(width, height) / 2, Math.min(width, height) / 2]);
+        }
+
+        function loadData() {
+            d3.csv("data1.csv").then(data => {
+                data.forEach(d => {
+                    d.x = +d.x;
+                    d.y = +d.y;
+                    d.z = +d.z;
+                });
+
+                points = g.selectAll("g.point")
+                    .data(data)
+                    .enter()
+                    .append("g")
+                    .attr("class", "point");
+                
+                points.append("image")
+                    .attr("xlink:href", d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`)
+                    .attr("width", imageSize)
+                    .attr("height", imageSize)
+                    .attr("x", -imageSize/2)
+                    .attr("y", -imageSize/2);
+
+                updatePositions();
+                setupInteractions();
+            }).catch(error => {
+                console.error("Error loading the CSV file:", error);
+            });
+        }
 
         function updatePositions() {
-            points.attr("transform", d => `translate(${scale(d.x)},${scale(d.y)})`);
-        }
-
-        function setupDragBehavior() {
-            let dragStartX, dragStartY;
-
-            svg.call(d3.drag()
-                .on("start", (event) => {
-                    dragStartX = event.x;
-                    dragStartY = event.y;
-                })
-                .on("drag", (event) => {
-                    const dx = event.x - dragStartX;
-                    const dy = event.y - dragStartY;
-                    rotation[0] += dy * 0.005;
-                    rotation[1] += dx * 0.005;
-                    updateRotation();
-                    dragStartX = event.x;
-                    dragStartY = event.y;
-                })
-            );
-        }
-
-        function updateRotation() {
             const [rx, ry] = rotation;
             const cosX = Math.cos(rx);
             const sinX = Math.sin(rx);
@@ -94,7 +139,7 @@
                 const x = d.x * cosY - d.z * sinY;
                 const y = d.y * cosX + (d.x * sinY + d.z * cosY) * sinX;
                 const z = d.y * -sinX + (d.x * sinY + d.z * cosY) * cosX;
-                return `translate(${scale(x)},${scale(y)})`;
+                return `translate(${scale(x) + translation[0]},${scale(y) + translation[1]})`;
             });
 
             points.sort((a, b) => {
@@ -102,7 +147,82 @@
                 const bz = b.y * -sinX + (b.x * sinY + b.z * cosY) * cosX;
                 return bz - az;
             });
+
+            // Update axes position
+            g.select(".axes").attr("transform", `translate(${translation[0]},${translation[1]}) rotate(${rotation[1] * 180 / Math.PI},0,0)`);
         }
+
+        function setupInteractions() {
+            let touchStartX, touchStartY;
+
+            svg.call(d3.drag()
+                .on("start", (event) => {
+                    touchStartX = event.x;
+                    touchStartY = event.y;
+                })
+                .on("drag", (event) => {
+                    if (event.sourceEvent.touches && event.sourceEvent.touches.length === 2) {
+                        // Two-finger pan
+                        const dx = event.x - touchStartX;
+                        const dy = event.y - touchStartY;
+                        translation[0] += dx;
+                        translation[1] += dy;
+                        updatePositions();
+                    } else {
+                        // One-finger rotate
+                        const dx = event.x - touchStartX;
+                        const dy = event.y - touchStartY;
+                        rotation[0] += dy * 0.005;
+                        rotation[1] += dx * 0.005;
+                        updatePositions();
+                    }
+                    touchStartX = event.x;
+                    touchStartY = event.y;
+                })
+            );
+
+            // Prevent default touch behavior
+            document.body.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+            }, { passive: false });
+
+            // Zoom controls
+            document.getElementById('zoom-in').addEventListener('click', () => {
+                zoomLevel *= 1.2;
+                updateScale();
+                updatePositions();
+            });
+
+            document.getElementById('zoom-out').addEventListener('click', () => {
+                zoomLevel /= 1.2;
+                updateScale();
+                updatePositions();
+            });
+
+            // Image size control
+            document.getElementById('image-size-control').addEventListener('input', (event) => {
+                imageSize = parseInt(event.target.value);
+                points.selectAll("image")
+                    .attr("width", imageSize)
+                    .attr("height", imageSize)
+                    .attr("x", -imageSize/2)
+                    .attr("y", -imageSize/2);
+            });
+        }
+
+        function resizeGraph() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            initializeGraph();
+            if (points) {
+                updatePositions();
+            }
+        }
+
+        window.addEventListener('resize', resizeGraph);
+
+        initializeGraph();
+        loadData();
     </script>
 </body>
 </html>
