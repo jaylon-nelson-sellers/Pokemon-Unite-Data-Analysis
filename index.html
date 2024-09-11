@@ -59,7 +59,7 @@
             updateScale();
 
             // Add axes
-            const axisLength = scale(30) - scale(0);
+            const axisLength = scale(100) - scale(0);
             const axes = g.append("g").attr("class", "axes");
             
             // X-axis
@@ -96,7 +96,7 @@
 
         function updateScale() {
             scale = d3.scaleLinear()
-                .domain([-50 / zoomLevel, 50 / zoomLevel])
+                .domain([-100 / zoomLevel, 100 / zoomLevel])
                 .range([-Math.min(width, height) / 2, Math.min(width, height) / 2]);
         }
 
@@ -153,31 +153,33 @@
         }
 
         function setupInteractions() {
-            let touchStartX, touchStartY;
+            let lastTouchX, lastTouchY;
+            let isPanning = false;
 
             svg.call(d3.drag()
                 .on("start", (event) => {
-                    touchStartX = event.x;
-                    touchStartY = event.y;
+                    lastTouchX = event.x;
+                    lastTouchY = event.y;
+                    isPanning = event.sourceEvent.touches && event.sourceEvent.touches.length === 2;
                 })
                 .on("drag", (event) => {
-                    if (event.sourceEvent.touches && event.sourceEvent.touches.length === 2) {
+                    const dx = event.x - lastTouchX;
+                    const dy = event.y - lastTouchY;
+                    if (isPanning) {
                         // Two-finger pan
-                        const dx = event.x - touchStartX;
-                        const dy = event.y - touchStartY;
                         translation[0] += dx;
                         translation[1] += dy;
-                        updatePositions();
                     } else {
                         // One-finger rotate
-                        const dx = event.x - touchStartX;
-                        const dy = event.y - touchStartY;
                         rotation[0] += dy * 0.005;
                         rotation[1] += dx * 0.005;
-                        updatePositions();
                     }
-                    touchStartX = event.x;
-                    touchStartY = event.y;
+                    updatePositions();
+                    lastTouchX = event.x;
+                    lastTouchY = event.y;
+                })
+                .on("end", () => {
+                    isPanning = false;
                 })
             );
 
@@ -200,14 +202,20 @@
             });
 
             // Image size control
-            document.getElementById('image-size-control').addEventListener('input', (event) => {
+            const imageSizeControl = document.getElementById('image-size-control');
+            
+            function updateImageSize(event) {
                 imageSize = parseInt(event.target.value);
                 points.selectAll("image")
                     .attr("width", imageSize)
                     .attr("height", imageSize)
                     .attr("x", -imageSize/2)
                     .attr("y", -imageSize/2);
-            });
+            }
+
+            imageSizeControl.addEventListener('input', updateImageSize);
+            imageSizeControl.addEventListener('change', updateImageSize);
+            imageSizeControl.addEventListener('touchmove', updateImageSize);
         }
 
         function resizeGraph() {
