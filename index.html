@@ -31,7 +31,7 @@
     <div class="controls">
         <button id="zoom-in" class="control-button">Zoom In</button>
         <button id="zoom-out" class="control-button">Zoom Out</button>
-        <button id="image-size-control" class="control-button">Image: Medium</button>
+        <button id="image-size-control" class="control-button">Size: Medium</button>
     </div>
     <script>
         let width = window.innerWidth;
@@ -42,6 +42,7 @@
         let zoomLevel = 1;
         let imageSize = 50;
         let imageSizeState = 'medium';
+        let isMobile = 'ontouchstart' in window;
 
         function initializeGraph() {
             d3.select("#container").selectAll("*").remove();
@@ -151,47 +152,11 @@
         }
 
         function setupInteractions() {
-            let lastX, lastY;
-            let isPanning = false;
-            let panningThreshold = 10; // Threshold to differentiate between rotation and panning
-
-            svg.call(d3.drag()
-                .on("start", (event) => {
-                    lastX = event.x;
-                    lastY = event.y;
-                    isPanning = false;
-                })
-                .on("drag", (event) => {
-                    const dx = event.x - lastX;
-                    const dy = event.y - lastY;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (!isPanning && distance > panningThreshold) {
-                        isPanning = event.sourceEvent.touches && event.sourceEvent.touches.length === 2;
-                    }
-
-                    if (isPanning) {
-                        // Two-finger pan
-                        translation[0] += dx;
-                        translation[1] += dy;
-                    } else {
-                        // One-finger rotate
-                        rotation[0] += dy * 0.005;
-                        rotation[1] += dx * 0.005;
-                    }
-                    updatePositions();
-                    lastX = event.x;
-                    lastY = event.y;
-                })
-                .on("end", () => {
-                    isPanning = false;
-                })
-            );
-
-            // Prevent default touch behavior
-            document.body.addEventListener('touchmove', function(e) {
-                e.preventDefault();
-            }, { passive: false });
+            if (isMobile) {
+                setupMobileInteractions();
+            } else {
+                setupDesktopInteractions();
+            }
 
             // Zoom controls
             document.getElementById('zoom-in').addEventListener('click', () => {
@@ -223,13 +188,119 @@
                         imageSizeState = 'small';
                         break;
                 }
-                imageSizeButton.textContent = `Image: ${imageSizeState.charAt(0).toUpperCase() + imageSizeState.slice(1)}`;
+                imageSizeButton.textContent = `Size: ${imageSizeState.charAt(0).toUpperCase() + imageSizeState.slice(1)}`;
                 points.selectAll("image")
                     .attr("width", imageSize)
                     .attr("height", imageSize)
                     .attr("x", -imageSize/2)
                     .attr("y", -imageSize/2);
             });
+        }
+
+        function setupDesktopInteractions() {
+            let lastX, lastY;
+            let isPanning = false;
+            let panningThreshold = 10;
+
+            svg.call(d3.drag()
+                .on("start", (event) => {
+                    lastX = event.x;
+                    lastY = event.y;
+                    isPanning = false;
+                })
+                .on("drag", (event) => {
+                    const dx = event.x - lastX;
+                    const dy = event.y - lastY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (!isPanning && distance > panningThreshold) {
+                        isPanning = event.sourceEvent.shiftKey;
+                    }
+
+                    if (isPanning) {
+                        translation[0] += dx;
+                        translation[1] += dy;
+                    } else {
+                        rotation[0] += dy * 0.005;
+                        rotation[1] += dx * 0.005;
+                    }
+                    updatePositions();
+                    lastX = event.x;
+                    lastY = event.y;
+                })
+                .on("end", () => {
+                    isPanning = false;
+                })
+            );
+        }
+
+        function setupMobileInteractions() {
+            let lastX, lastY, lastDist;
+            let touchInteraction = false;
+
+            svg.on("touchstart", (event) => {
+                event.preventDefault();
+                touchInteraction = true;
+                const touches = event.touches;
+                if (touches.length === 1) {
+                    lastX = touches[0].clientX;
+                    lastY = touches[0].clientY;
+                } else if (touches.length === 2) {
+                    lastX = (touches[0].clientX + touches[1].clientX) / 2;
+                    lastY = (touches[0].clientY + touches[1].clientY) / 2;
+                    lastDist = Math.hypot(
+                        touches[0].clientX - touches[1].clientX,
+                        touches[0].clientY - touches[1].clientY
+                    );
+                }
+            });
+
+            svg.on("touchmove", (event) => {
+                event.preventDefault();
+                if (!touchInteraction) return;
+                
+                const touches = event.touches;
+                if (touches.length === 1) {
+                    // One finger touch: rotate
+                    const dx = touches[0].clientX - lastX;
+                    const dy = touches[0].clientY - lastY;
+                    rotation[0] += dy * 0.005;
+                    rotation[1] += dx * 0.005;
+                    lastX = touches[0].clientX;
+                    lastY = touches[0].clientY;
+                } else if (touches.length === 2) {
+                    // Two finger touch: pan and zoom
+                    const currentX = (touches[0].clientX + touches[1].clientX) / 2;
+                    const currentY = (touches[0].clientY + touches[1].clientY) / 2;
+                    const currentDist = Math.hypot(
+                        touches[0].clientX - touches[1].clientX,
+                        touches[0].clientY - touches[1].clientY
+                    );
+                    
+                    // Pan
+                    translation[0] += currentX - lastX;
+                    translation[1] += currentY - lastY;
+                    
+                    // Zoom
+                    const zoomDelta = currentDist / lastDist;
+                    zoomLevel *= zoomDelta;
+                    updateScale();
+                    
+                    lastX = currentX;
+                    lastY = currentY;
+                    lastDist = currentDist;
+                }
+                updatePositions();
+            });
+
+            svg.on("touchend", () => {
+                touchInteraction = false;
+            });
+
+            // Prevent default touch behavior
+            document.body.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+            }, { passive: false });
         }
 
         function resizeGraph() {
