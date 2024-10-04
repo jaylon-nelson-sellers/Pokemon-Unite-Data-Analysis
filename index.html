@@ -95,7 +95,7 @@
 
         function updateScale() {
             scale = d3.scaleLinear()
-                .domain([-100 / zoomLevel, 100 / zoomLevel])
+                .domain([-75 / zoomLevel, 75 / zoomLevel])
                 .range([-Math.min(width, height) / 2, Math.min(width, height) / 2]);
         }
 
