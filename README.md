@@ -14,7 +14,7 @@ Data were collected from the website UniteAPI, which provides comprehensive stat
 
 To manage the high-dimensional dataset, Principal Component Analysis (PCA) was employed. PCA reduced the 70 variables into one, two, and three principal components while retaining the maximum amount of information possible. This dimensionality reduction facilitated more efficient and interpretable analyses.
 
-*[https://jaylon-nelson-sellers.github.io/Pokemon-Unite-Data-Analysis/]*
+[View Characters visualized in 3-D](https://jaylon-nelson-sellers.github.io/Pokemon-Unite-Data-Analysis/)
 
 ### Clustering Techniques
 
@@ -53,3 +53,12 @@ A noted limitation is the overrepresentation or underrepresentation of certain c
 ## Conclusion
 
 This study successfully applied data science techniques to create a nuanced ranking of character strength in *Pokémon Unite*. The integration of matchup data and advanced analytical methods offers players a new perspective on character dynamics within the game. The results will be shared with the community to foster discussion and further refinement of the model.
+
+## Citations
+- Gupta, Alind. “Elbow Method for Optimal Value of K in KMeans.” GeeksforGeeks, 6 June 2019, www.geeksforgeeks.org
+- elbow-method-for-optimal-value-of-k-in-kmeans/. Accessed 4 Oct. 2024.IBM. 
+- “What Is Principal Component Analysis? | IBM.” Www.ibm.com, 8 Dec. 2023, www.ibm.com/topics/principal-component-analysis. Accessed 4 Oct. 2024.
+- Jain, Deepak. “Data Preprocessing in Data Mining.” GeeksforGeeks, 12 Mar. 2019, www.geeksforgeeks.org/data-preprocessing-in-data-mining/. Accessed 4 Oct. 2024.
+- Kavlakoglu, Eda , and Vanna Winland. “What Is K-Means Clustering? | IBM.” Www.ibm.com, 27 June 2024, www.ibm.com/topics/k-means-clustering. Accessed 4 Oct. 
+- scikit-learn. “Sklearn.cluster.KMeans — Scikit-Learn 0.21.3 Documentation.” Scikit-Learn.org, 2019, scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html. Accessed 4 Oct. 2024.---. 
+- scikit-learn. “Sklearn.decomposition.PCA — Scikit-Learn 0.20.3 Documentation.” Scikit-Learn.org, 2009, scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html. Accessed 4 Oct. 2024.UniteAPI. “Unite API | Pokémon Unite Meta Tierlist.” Uniteapi.dev, 29 Aug. 2023, uniteapi.dev/meta. Accessed 4 Oct. 2024.
