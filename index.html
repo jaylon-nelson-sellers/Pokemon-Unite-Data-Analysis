@@ -135,10 +135,11 @@
         let scale, svg, g, points;
         let rotation = [0, 0];
         let translation = [0, 0];
-        let zoomLevel = 1;
+        let zoomLevel = .5;
         let imageSize = 50;
         let imageSizeState = 'medium';
         let isMobile = 'ontouchstart' in window;
+        let animationFrameRequested = false; // Flag to prevent multiple rAF requests
 
         // Initialize the Graph (Called Once)
         function initializeGraph() {
@@ -208,7 +209,7 @@
                     d.z = +d.z;
                 });
 
-                // Bind Data
+                // Bind Data with Key Function for Efficient Updates
                 points = g.selectAll("g.point")
                     .data(data, d => d.Character); // Use Character as key
 
@@ -231,11 +232,11 @@
                 // Merge Enter and Update Selections
                 points = pointsEnter.merge(points);
 
-                // Optimize image loading by preloading images
+                // Preload Images to Improve Perceived Load Time
                 preloadImages(data.map(d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`));
 
-                updatePositions();
-                setupInteractions();
+                // Initial Position Update
+                scheduleUpdatePositions();
             }).catch(error => {
                 console.error("Error loading the CSV file:", error);
             });
@@ -251,20 +252,21 @@
 
         // Update Positions of Points Based on Rotation and Translation
         function updatePositions() {
+            // Calculate sine and cosine once per frame
             const [rx, ry] = rotation;
             const cosX = Math.cos(rx);
             const sinX = Math.sin(rx);
             const cosY = Math.cos(ry);
             const sinY = Math.sin(ry);
 
-            // Compute transformed coordinates and set transforms
+            // Calculate transformed positions
             points.attr("transform", d => {
                 const x = d.x * cosY - d.z * sinY;
                 const y = d.y * cosX + (d.x * sinY + d.z * cosY) * sinX;
                 return `translate(${scale(x) + translation[0]},${scale(y) + translation[1]})`;
             });
 
-            // Sorting based on depth for proper rendering
+            // Sort points based on depth to handle z-ordering
             points.sort((a, b) => {
                 const az = a.y * -sinX + (a.x * sinY + a.z * cosY) * cosX;
                 const bz = b.y * -sinX + (b.x * sinY + b.z * cosY) * cosX;
@@ -273,6 +275,17 @@
 
             // Update Axes Position
             g.select(".axes").attr("transform", `translate(${translation[0]},${translation[1]}) rotate(${ry * 180 / Math.PI},0,0)`);
+
+            // Reset the flag to allow new animation frames
+            animationFrameRequested = false;
+        }
+
+        // Schedule Update Positions Using requestAnimationFrame
+        function scheduleUpdatePositions() {
+            if (!animationFrameRequested) {
+                animationFrameRequested = true;
+                requestAnimationFrame(updatePositions);
+            }
         }
 
         // Setup User Interactions (Drag, Zoom, etc.)
@@ -287,13 +300,13 @@
             document.getElementById('zoom-in').addEventListener('click', () => {
                 zoomLevel *= 1.2;
                 updateScale();
-                updatePositions();
+                scheduleUpdatePositions();
             });
 
             document.getElementById('zoom-out').addEventListener('click', () => {
                 zoomLevel /= 1.2;
                 updateScale();
-                updatePositions();
+                scheduleUpdatePositions();
             });
 
             // Image Size Control
@@ -350,7 +363,7 @@
                         rotation[0] += dy * 0.005;
                         rotation[1] += dx * 0.005;
                     }
-                    updatePositions();
+                    scheduleUpdatePositions();
                     lastX = event.x;
                     lastY = event.y;
                 })
@@ -417,7 +430,7 @@
                     lastY = currentY;
                     lastDist = currentDist;
                 }
-                updatePositions();
+                scheduleUpdatePositions();
             });
 
             svg.on("touchend", () => {
@@ -443,9 +456,7 @@
                 .attr("transform", `translate(${width / 2},${height / 2})`);
 
             updateScale();
-            if (points) {
-                updatePositions();
-            }
+            scheduleUpdatePositions();
         }
 
         // Event Listener for Window Resize with Debounced Function
@@ -471,20 +482,6 @@
             initializeGraph();
             loadData();
         });
-
-        // Preload Images Function to Improve Perceived Load Time
-        function preloadImages(imageUrls) {
-            const promises = imageUrls.map(url => {
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.src = url;
-                    img.onload = resolve;
-                    img.onerror = reject;
-                });
-            });
-
-            return Promise.all(promises);
-        }
 
         // Optionally, initialize and load graph immediately (uncomment if preferred)
         /*
