@@ -70,6 +70,8 @@
             z-index: 20; /* Ensure introduction is above everything */
             box-sizing: border-box; /* Include padding in width and height */
             overflow: auto; /* Allow scrolling if content overflows */
+            opacity: 1; /* Ensure it's fully visible initially */
+            transition: opacity 0.3s; /* Smooth fade-out */
         }
         #introduction h1 {
             font-size: 5vw; /* Responsive font size */
@@ -135,7 +137,7 @@
         let scale, svg, g, points;
         let rotation = [0, 0];
         let translation = [0, 0];
-        let zoomLevel = .5;
+        let zoomLevel = 1;
         let imageSize = 50;
         let imageSizeState = 'medium';
         let isMobile = 'ontouchstart' in window;
@@ -222,7 +224,7 @@
                     .attr("class", "point");
 
                 pointsEnter.append("image")
-                    .attr("xlink:href", d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`)
+                    .attr("href", d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`)
                     .attr("width", imageSize)
                     .attr("height", imageSize)
                     .attr("x", -imageSize / 2)
@@ -259,6 +261,9 @@
             const cosY = Math.cos(ry);
             const sinY = Math.sin(ry);
 
+            // Debugging: Log rotation angles
+            // console.log(`Rotation rx: ${rx}, ry: ${ry}`);
+
             // Calculate transformed positions
             points.attr("transform", d => {
                 const x = d.x * cosY - d.z * sinY;
@@ -273,8 +278,12 @@
                 return bz - az;
             });
 
-            // Update Axes Position
-            g.select(".axes").attr("transform", `translate(${translation[0]},${translation[1]}) rotate(${ry * 180 / Math.PI},0,0)`);
+            // Synchronize Axes Rotation with ry (if needed)
+            // Uncomment the following lines if you want the axes to rotate
+            // similarly to the data points.
+            /*
+            g.select(".axes").attr("transform", `rotate(${ry * 180 / Math.PI})`);
+            */
 
             // Reset the flag to allow new animation frames
             animationFrameRequested = false;
