@@ -11,7 +11,7 @@
             margin: 0; 
             overflow: hidden; 
             touch-action: none; 
-            font-family: Arial, sans-serif; /* Optional: Improve font appearance */
+            font-family: Arial, sans-serif; /* Improve font appearance */
         }
         #container { 
             width: 100vw; 
@@ -30,7 +30,7 @@
             position: fixed;
             top: 10px;
             right: 10px;
-            display: flex;
+            display: none; /* Hide controls initially */
             flex-direction: column;
             align-items: flex-end;
             z-index: 10; /* Ensure controls are above other elements */
@@ -42,12 +42,12 @@
             cursor: pointer;
             border: none;
             border-radius: 4px;
-            background-color: #4CAF50; /* Optional: Button color */
-            color: white; /* Optional: Button text color */
+            background-color: #4CAF50; /* Button color */
+            color: white; /* Button text color */
             transition: background-color 0.3s;
         }
         .control-button:hover {
-            background-color: #45a049; /* Optional: Button hover effect */
+            background-color: #45a049; /* Button hover effect */
         }
         /* Introduction overlay styles */
         #introduction {
@@ -64,13 +64,15 @@
             align-items: center;
             text-align: center;
             padding: 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Optional: Add shadow for depth */
-            border-radius: 8px; /* Optional: Rounded corners */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Add shadow for depth */
+            border-radius: 8px; /* Rounded corners */
             z-index: 20; /* Ensure introduction is above everything */
             box-sizing: border-box; /* Include padding in width and height */
         }
         #introduction h1 {
-            font-size: 2em;
+            font-size: 5vw; /* Responsive font size */
+            max-width: 100%; /* Ensure it doesn't exceed container width */
+            word-wrap: break-word; /* Wrap words to prevent overflow */
             margin-bottom: 20px;
         }
         #introduction p {
@@ -84,12 +86,12 @@
             cursor: pointer;
             border: none;
             border-radius: 4px;
-            background-color: #008CBA; /* Optional: Button color */
-            color: white; /* Optional: Button text color */
+            background-color: #008CBA; /* Button color */
+            color: white; /* Button text color */
             transition: background-color 0.3s;
         }
         #introduction button:hover {
-            background-color: #007B9E; /* Optional: Button hover effect */
+            background-color: #007B9E; /* Button hover effect */
         }
     </style>
 </head>
@@ -120,7 +122,7 @@
         let scale, svg, g, points;
         let rotation = [0, 0];
         let translation = [0, 0];
-        let zoomLevel = .5;
+        let zoomLevel = 1;
         let imageSize = 50;
         let imageSizeState = 'medium';
         let isMobile = 'ontouchstart' in window;
@@ -417,6 +419,8 @@
         document.getElementById('start-button').addEventListener('click', () => {
             // Hide the introduction overlay
             d3.select('#introduction').style('display', 'none');
+            // Show the control buttons
+            d3.select('.controls').style('display', 'flex');
             // Initialize graph and load data
             initializeGraph();
             loadData();
