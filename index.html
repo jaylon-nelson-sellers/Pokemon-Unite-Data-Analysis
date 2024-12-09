@@ -12,7 +12,6 @@
             overflow: hidden; 
             touch-action: none; 
             font-family: Arial, sans-serif; /* Improve font appearance */
-            background-color: #f0f0f0; /* Optional: Background color */
         }
         #container { 
             width: 100vw; 
@@ -38,14 +37,14 @@
         }
         .control-button {
             margin: 5px;
-            padding: 8px 12px; /* Slightly smaller padding for faster rendering */
-            font-size: 14px; /* Slightly smaller font for better fit */
+            padding: 5px 10px;
+            font-size: 16px;
             cursor: pointer;
             border: none;
             border-radius: 4px;
             background-color: #4CAF50; /* Button color */
             color: white; /* Button text color */
-            transition: background-color 0.2s; /* Faster transition */
+            transition: background-color 0.3s;
         }
         .control-button:hover {
             background-color: #45a049; /* Button hover effect */
@@ -69,9 +68,6 @@
             border-radius: 8px; /* Rounded corners */
             z-index: 20; /* Ensure introduction is above everything */
             box-sizing: border-box; /* Include padding in width and height */
-            overflow: auto; /* Allow scrolling if content overflows */
-            opacity: 1; /* Ensure it's fully visible initially */
-            transition: opacity 0.3s; /* Smooth fade-out */
         }
         #introduction h1 {
             font-size: 5vw; /* Responsive font size */
@@ -83,7 +79,6 @@
             font-size: 1.2em;
             max-width: 90%; /* Ensure text doesn't exceed the container */
             margin-bottom: 30px;
-            line-height: 1.4; /* Improve readability */
         }
         #introduction button {
             padding: 10px 20px;
@@ -93,7 +88,7 @@
             border-radius: 4px;
             background-color: #008CBA; /* Button color */
             color: white; /* Button text color */
-            transition: background-color 0.2s; /* Faster transition */
+            transition: background-color 0.3s;
         }
         #introduction button:hover {
             background-color: #007B9E; /* Button hover effect */
@@ -121,16 +116,6 @@
     </div>
 
     <script>
-        // Debounce Function to Limit Function Calls
-        function debounce(func, wait) {
-            let timeout;
-            return function(...args) {
-                const context = this;
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(context, args), wait);
-            };
-        }
-
         // Global Variables
         let width = window.innerWidth;
         let height = window.innerHeight;
@@ -141,7 +126,6 @@
         let imageSize = 50;
         let imageSizeState = 'medium';
         let isMobile = 'ontouchstart' in window;
-        let animationFrameRequested = false; // Flag to prevent multiple rAF requests
 
         // Initialize the Graph (Called Once)
         function initializeGraph() {
@@ -211,90 +195,48 @@
                     d.z = +d.z;
                 });
 
-                // Bind Data with Key Function for Efficient Updates
                 points = g.selectAll("g.point")
-                    .data(data, d => d.Character); // Use Character as key
-
-                // Exit Selection
-                points.exit().remove();
-
-                // Enter Selection
-                const pointsEnter = points.enter()
+                    .data(data)
+                    .enter()
                     .append("g")
                     .attr("class", "point");
-
-                pointsEnter.append("image")
-                    .attr("href", d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`)
+                
+                points.append("image")
+                    .attr("xlink:href", d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`)
                     .attr("width", imageSize)
                     .attr("height", imageSize)
                     .attr("x", -imageSize / 2)
-                    .attr("y", -imageSize / 2)
-                    .attr("loading", "lazy"); // Lazy load images
+                    .attr("y", -imageSize / 2);
 
-                // Merge Enter and Update Selections
-                points = pointsEnter.merge(points);
-
-                // Preload Images to Improve Perceived Load Time
-                preloadImages(data.map(d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`));
-
-                // Initial Position Update
-                scheduleUpdatePositions();
+                updatePositions();
+                setupInteractions();
             }).catch(error => {
                 console.error("Error loading the CSV file:", error);
             });
         }
 
-        // Preload Images Function
-        function preloadImages(imageUrls) {
-            imageUrls.forEach(url => {
-                const img = new Image();
-                img.src = url;
-            });
-        }
-
         // Update Positions of Points Based on Rotation and Translation
         function updatePositions() {
-            // Calculate sine and cosine once per frame
             const [rx, ry] = rotation;
             const cosX = Math.cos(rx);
             const sinX = Math.sin(rx);
             const cosY = Math.cos(ry);
             const sinY = Math.sin(ry);
 
-            // Debugging: Log rotation angles
-            // console.log(`Rotation rx: ${rx}, ry: ${ry}`);
-
-            // Calculate transformed positions
             points.attr("transform", d => {
                 const x = d.x * cosY - d.z * sinY;
                 const y = d.y * cosX + (d.x * sinY + d.z * cosY) * sinX;
                 return `translate(${scale(x) + translation[0]},${scale(y) + translation[1]})`;
             });
 
-            // Sort points based on depth to handle z-ordering
             points.sort((a, b) => {
                 const az = a.y * -sinX + (a.x * sinY + a.z * cosY) * cosX;
                 const bz = b.y * -sinX + (b.x * sinY + b.z * cosY) * cosX;
                 return bz - az;
             });
 
-            // Synchronize Axes Rotation with ry (if needed)
-            // Uncomment the following lines if you want the axes to rotate
-            // similarly to the data points.
-            /*
-            g.select(".axes").attr("transform", `rotate(${ry * 180 / Math.PI})`);
-            */
-
-            // Reset the flag to allow new animation frames
-            animationFrameRequested = false;
-        }
-
-        // Schedule Update Positions Using requestAnimationFrame
-        function scheduleUpdatePositions() {
-            if (!animationFrameRequested) {
-                animationFrameRequested = true;
-                requestAnimationFrame(updatePositions);
-            }
+            // Update Axes Position
+            g.select(".axes").attr("transform", `translate(${translation[0]},${translation[1]}) rotate(${rotation[1] * 180 / Math.PI},0,0)`);
         }
 
         // Setup User Interactions (Drag, Zoom, etc.)
@@ -309,13 +251,13 @@
             document.getElementById('zoom-in').addEventListener('click', () => {
                 zoomLevel *= 1.2;
                 updateScale();
-                scheduleUpdatePositions();
+                updatePositions();
             });
 
             document.getElementById('zoom-out').addEventListener('click', () => {
                 zoomLevel /= 1.2;
                 updateScale();
-                scheduleUpdatePositions();
+                updatePositions();
             });
 
             // Image Size Control
@@ -348,7 +290,7 @@
         function setupDesktopInteractions() {
             let lastX, lastY;
             let isPanning = false;
-            const panningThreshold = 10;
+            let panningThreshold = 10;
 
             svg.call(d3.drag()
                 .on("start", (event) => {
@@ -372,7 +314,7 @@
                         rotation[0] += dy * 0.005;
                         rotation[1] += dx * 0.005;
                     }
-                    scheduleUpdatePositions();
+                    updatePositions();
                     lastX = event.x;
                     lastY = event.y;
                 })
@@ -407,7 +349,7 @@
             svg.on("touchmove", (event) => {
                 event.preventDefault();
                 if (!touchInteraction) return;
-
+                
                 const touches = event.touches;
                 if (touches.length === 1) {
                     // One finger touch: rotate
@@ -425,21 +367,21 @@
                         touches[0].clientX - touches[1].clientX,
                         touches[0].clientY - touches[1].clientY
                     );
-
+                    
                     // Pan
                     translation[0] += currentX - lastX;
                     translation[1] += currentY - lastY;
-
+                    
                     // Zoom
                     const zoomDelta = currentDist / lastDist;
                     zoomLevel *= zoomDelta;
                     updateScale();
-
+                    
                     lastX = currentX;
                     lastY = currentY;
                     lastDist = currentDist;
                 }
-                scheduleUpdatePositions();
+                updatePositions();
             });
 
             svg.on("touchend", () => {
@@ -452,7 +394,7 @@
             }, { passive: false });
         }
 
-        // Handle Window Resize with Debounce
+        // Handle Window Resize
         function resizeGraph() {
             width = window.innerWidth;
             height = window.innerHeight;
@@ -465,28 +407,20 @@
                 .attr("transform", `translate(${width / 2},${height / 2})`);
 
             updateScale();
-            scheduleUpdatePositions();
+            if (points) {
+                updatePositions();
+            }
         }
 
-        // Event Listener for Window Resize with Debounced Function
-        window.addEventListener('resize', debounce(resizeGraph, 200));
+        // Event Listener for Window Resize
+        window.addEventListener('resize', resizeGraph);
 
         // Event Listener for Start Button to Hide Introduction and Load Graph
         document.getElementById('start-button').addEventListener('click', () => {
-            // Hide the introduction overlay with a fade-out effect for better UX
-            d3.select('#introduction')
-                .transition()
-                .duration(300) // Faster transition
-                .style('opacity', 0)
-                .on('end', () => d3.select('#introduction').style('display', 'none'));
-
-            // Show the control buttons with a fade-in effect
-            d3.select('.controls')
-                .transition()
-                .duration(300) // Faster transition
-                .style('display', 'flex')
-                .style('opacity', 1);
-
+            // Hide the introduction overlay
+            d3.select('#introduction').style('display', 'none');
+            // Show the control buttons
+            d3.select('.controls').style('display', 'flex');
             // Initialize graph and load data
             initializeGraph();
             loadData();
