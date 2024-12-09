@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Pokémon Graph</title>
+    <title>Pokemon Unite Character Relational Graph</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
+        /* Basic styles */
         body { margin: 0; overflow: hidden; touch-action: none; }
-        #container { width: 100vw; height: 100vh; }
+        #container { width: 100vw; height: 100vh; position: relative; }
         .axis-line { stroke: rgba(0, 0, 0, 0.2); stroke-width: 1.5; }
         .axis-label { fill: rgba(0, 0, 0, 0.4); font-size: 10px; }
         .controls {
@@ -17,6 +18,7 @@
             display: flex;
             flex-direction: column;
             align-items: flex-end;
+            z-index: 10; /* Ensure controls are above other elements */
         }
         .control-button {
             margin: 5px;
@@ -24,81 +26,130 @@
             font-size: 16px;
             cursor: pointer;
         }
+        /* Introduction overlay styles */
+        #introduction {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 20; /* Ensure introduction is above everything */
+        }
+        #introduction h1 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        #introduction p {
+            font-size: 1.2em;
+            max-width: 600px;
+            margin-bottom: 30px;
+        }
+        #introduction button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <!-- Introduction Overlay -->
+    <div id="introduction">
+        <h1>Pokemon Unite Character Relational Graph</h1>
+        <p>
+            Pokemon Unite is a MOBA with a diverse class of characters. This tool uses data science techniques to show how alike characters are to each other using a relational graph. Keep in mind that the x, y, and z dimensions do not represent one value. Rather, they represent the overall attributes of the characters "decomposed" into three axes. I hope you find this tool helpful.
+        </p>
+        <button id="start-button">Start</button>
+    </div>
+
+    <!-- Container for the Graph -->
     <div id="container"></div>
+
+    <!-- Control Buttons -->
     <div class="controls">
         <button id="zoom-in" class="control-button">Zoom In</button>
         <button id="zoom-out" class="control-button">Zoom Out</button>
         <button id="image-size-control" class="control-button">Size: Medium</button>
     </div>
+
     <script>
+        // Global Variables
         let width = window.innerWidth;
         let height = window.innerHeight;
         let scale, svg, g, points;
         let rotation = [0, 0];
         let translation = [0, 0];
-        let zoomLevel = 1;
+        let zoomLevel = .25;
         let imageSize = 50;
         let imageSizeState = 'medium';
         let isMobile = 'ontouchstart' in window;
 
+        // Initialize the Graph (Called Once)
         function initializeGraph() {
-            d3.select("#container").selectAll("*").remove();
+            const container = d3.select("#container");
 
-            svg = d3.select("#container")
-                .append("svg")
-                .attr("width", width)
-                .attr("height", height);
+            // Create SVG only if it doesn't exist
+            if (container.select("svg").empty()) {
+                svg = container.append("svg")
+                    .attr("width", width)
+                    .attr("height", height);
 
-            g = svg.append("g")
-                .attr("transform", `translate(${width/2},${height/2})`);
+                g = svg.append("g")
+                    .attr("transform", `translate(${width / 2},${height / 2})`);
+
+                // Add Axes
+                const axisGroup = g.append("g").attr("class", "axes");
+
+                const axisLength = 10; // Adjusted for scale
+                // X-axis
+                axisGroup.append("line")
+                    .attr("class", "axis-line")
+                    .attr("x1", -axisLength).attr("y1", 0)
+                    .attr("x2", axisLength).attr("y2", 0);
+                axisGroup.append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", axisLength + 5).attr("y", 3)
+                    .text("X");
+
+                // Y-axis
+                axisGroup.append("line")
+                    .attr("class", "axis-line")
+                    .attr("x1", 0).attr("y1", -axisLength)
+                    .attr("x2", 0).attr("y2", axisLength);
+                axisGroup.append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", 3).attr("y", -axisLength - 5)
+                    .text("Y");
+
+                // Z-axis
+                axisGroup.append("line")
+                    .attr("class", "axis-line")
+                    .attr("x1", 0).attr("y1", 0)
+                    .attr("x2", axisLength * Math.cos(Math.PI / 4)).attr("y2", -axisLength * Math.sin(Math.PI / 4));
+                axisGroup.append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", axisLength * Math.cos(Math.PI / 4) + 5)
+                    .attr("y", -axisLength * Math.sin(Math.PI / 4) - 5)
+                    .text("Z");
+            }
 
             updateScale();
-
-            // Add axes
-            const axisLength = scale(30) - scale(0);
-            const axes = g.append("g").attr("class", "axes");
-            
-            // X-axis
-            axes.append("line")
-                .attr("class", "axis-line")
-                .attr("x1", -axisLength).attr("y1", 0)
-                .attr("x2", axisLength).attr("y2", 0);
-            axes.append("text")
-                .attr("class", "axis-label")
-                .attr("x", axisLength + 5).attr("y", 3)
-                .text("X");
-
-            // Y-axis
-            axes.append("line")
-                .attr("class", "axis-line")
-                .attr("x1", 0).attr("y1", -axisLength)
-                .attr("x2", 0).attr("y2", axisLength);
-            axes.append("text")
-                .attr("class", "axis-label")
-                .attr("x", 3).attr("y", -axisLength - 5)
-                .text("Y");
-
-            // Z-axis
-            axes.append("line")
-                .attr("class", "axis-line")
-                .attr("x1", 0).attr("y1", 0)
-                .attr("x2", axisLength * Math.cos(Math.PI/4)).attr("y2", -axisLength * Math.sin(Math.PI/4));
-            axes.append("text")
-                .attr("class", "axis-label")
-                .attr("x", axisLength * Math.cos(Math.PI/4) + 5)
-                .attr("y", -axisLength * Math.sin(Math.PI/4) - 5)
-                .text("Z");
         }
 
+        // Update Scale Based on Zoom Level and Window Size
         function updateScale() {
             scale = d3.scaleLinear()
                 .domain([-10 / zoomLevel, 10 / zoomLevel])
                 .range([-Math.min(width, height) / 2, Math.min(width, height) / 2]);
         }
 
+        // Load Data and Create Points
         function loadData() {
             d3.csv("data-3d.csv").then(data => {
                 data.forEach(d => {
@@ -117,8 +168,8 @@
                     .attr("xlink:href", d => `pokemon_images/${d.Character.toLowerCase().replace(/ /g, "_")}.png`)
                     .attr("width", imageSize)
                     .attr("height", imageSize)
-                    .attr("x", -imageSize/2)
-                    .attr("y", -imageSize/2);
+                    .attr("x", -imageSize / 2)
+                    .attr("y", -imageSize / 2);
 
                 updatePositions();
                 setupInteractions();
@@ -127,6 +178,7 @@
             });
         }
 
+        // Update Positions of Points Based on Rotation and Translation
         function updatePositions() {
             const [rx, ry] = rotation;
             const cosX = Math.cos(rx);
@@ -137,7 +189,6 @@
             points.attr("transform", d => {
                 const x = d.x * cosY - d.z * sinY;
                 const y = d.y * cosX + (d.x * sinY + d.z * cosY) * sinX;
-                const z = d.y * -sinX + (d.x * sinY + d.z * cosY) * cosX;
                 return `translate(${scale(x) + translation[0]},${scale(y) + translation[1]})`;
             });
 
@@ -147,10 +198,11 @@
                 return bz - az;
             });
 
-            // Update axes position
+            // Update Axes Position
             g.select(".axes").attr("transform", `translate(${translation[0]},${translation[1]}) rotate(${rotation[1] * 180 / Math.PI},0,0)`);
         }
 
+        // Setup User Interactions (Drag, Zoom, etc.)
         function setupInteractions() {
             if (isMobile) {
                 setupMobileInteractions();
@@ -158,7 +210,7 @@
                 setupDesktopInteractions();
             }
 
-            // Zoom controls
+            // Zoom Controls
             document.getElementById('zoom-in').addEventListener('click', () => {
                 zoomLevel *= 1.2;
                 updateScale();
@@ -171,7 +223,7 @@
                 updatePositions();
             });
 
-            // Image size control
+            // Image Size Control
             const imageSizeButton = document.getElementById('image-size-control');
             imageSizeButton.addEventListener('click', () => {
                 switch (imageSizeState) {
@@ -192,11 +244,12 @@
                 points.selectAll("image")
                     .attr("width", imageSize)
                     .attr("height", imageSize)
-                    .attr("x", -imageSize/2)
-                    .attr("y", -imageSize/2);
+                    .attr("x", -imageSize / 2)
+                    .attr("y", -imageSize / 2);
             });
         }
 
+        // Setup Desktop Interactions (Drag to Rotate/Pan)
         function setupDesktopInteractions() {
             let lastX, lastY;
             let isPanning = false;
@@ -234,6 +287,7 @@
             );
         }
 
+        // Setup Mobile Interactions (Touch Events)
         function setupMobileInteractions() {
             let lastX, lastY, lastDist;
             let touchInteraction = false;
@@ -303,19 +357,41 @@
             }, { passive: false });
         }
 
+        // Handle Window Resize
         function resizeGraph() {
             width = window.innerWidth;
             height = window.innerHeight;
-            initializeGraph();
+
+            svg
+                .attr("width", width)
+                .attr("height", height);
+
+            g
+                .attr("transform", `translate(${width / 2},${height / 2})`);
+
+            updateScale();
             if (points) {
                 updatePositions();
             }
         }
 
+        // Event Listener for Window Resize
         window.addEventListener('resize', resizeGraph);
 
+        // Event Listener for Start Button to Hide Introduction and Load Graph
+        document.getElementById('start-button').addEventListener('click', () => {
+            // Hide the introduction overlay
+            d3.select('#introduction').style('display', 'none');
+            // Initialize graph and load data
+            initializeGraph();
+            loadData();
+        });
+
+        // Optionally, initialize and load graph immediately (uncomment if preferred)
+        /*
         initializeGraph();
         loadData();
+        */
     </script>
 </body>
 </html>
