@@ -133,7 +133,7 @@
         let rotation = [0, 0];
         let translation = [0, 0];
         let zoomLevel = .25; // Adjusted initial zoom level
-        let imageSize = 50;
+        let imageSize = 25;
         let imageSizeState = 'medium';
         let isMobile = 'ontouchstart' in window;
 
@@ -202,17 +202,17 @@
                 // Add Axis Labels
                 axisGroup.append("text")
                     .attr("class", "axis-label")
-                    .attr("x", axes.x.x + 10).attr("y", axes.x.y)
+                    .attr("x", axes.x.x + 1).attr("y", axes.x.y)
                     .text("X");
 
                 axisGroup.append("text")
                     .attr("class", "axis-label")
-                    .attr("x", axes.y.x).attr("y", axes.y.y - 10)
+                    .attr("x", axes.y.x).attr("y", axes.y.y - 1)
                     .text("Y");
 
                 axisGroup.append("text")
                     .attr("class", "axis-label")
-                    .attr("x", axes.z.x + 10).attr("y", axes.z.y)
+                    .attr("x", axes.z.x + 1).attr("y", axes.z.y)
                     .text("Z");
             }
 
@@ -340,7 +340,7 @@
             imageSizeButton.addEventListener('click', () => {
                 switch (imageSizeState) {
                     case 'small':
-                        imageSize = 50;
+                        imageSize = 25;
                         imageSizeState = 'medium';
                         break;
                     case 'medium':
@@ -348,7 +348,7 @@
                         imageSizeState = 'large';
                         break;
                     case 'large':
-                        imageSize = 25;
+                        imageSize = 12;
                         imageSizeState = 'small';
                         break;
                 }
