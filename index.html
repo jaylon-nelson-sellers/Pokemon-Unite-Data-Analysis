@@ -19,12 +19,21 @@
             position: relative; 
         }
         .axis-line { 
-            stroke: rgba(0, 0, 0, 0.2); 
-            stroke-width: 1.5; 
+            stroke-width: 3; /* Increased stroke width */
+        }
+        .axis-x {
+            stroke: red; /* X-axis in red */
+        }
+        .axis-y {
+            stroke: green; /* Y-axis in green */
+        }
+        .axis-z {
+            stroke: blue; /* Z-axis in blue */
         }
         .axis-label { 
-            fill: rgba(0, 0, 0, 0.4); 
-            font-size: 10px; 
+            fill: black; /* Solid color for better visibility */
+            font-size: 14px; /* Increased font size */
+            font-weight: bold; /* Bold labels */
         }
         .controls {
             position: fixed;
@@ -100,8 +109,8 @@
     <div id="introduction">
         <h1>Pokemon Unite Character Relational Graph</h1>
         <p>
-           Pokémon Unite is a MOBA featuring a diverse roster of characters. This tool leverages data science to highlight the similarities and differences between them. Note that the x, y, and z axes represent the characters' overall attributes, not individual values.
-               
+           Pokémon Unite is a MOBA featuring a diverse roster of characters. 
+           This applet shows the current in-game meta by characters according to Winrate (X axis), Pickrate (Y axis), Banrate (Z axis).
         </p>
         <button id="start-button">Start</button>
     </div>
@@ -123,10 +132,24 @@
         let scale, svg, g, points;
         let rotation = [0, 0];
         let translation = [0, 0];
-        let zoomLevel = .25;
+        let zoomLevel = .25; // Adjusted initial zoom level
         let imageSize = 50;
         let imageSizeState = 'medium';
         let isMobile = 'ontouchstart' in window;
+
+        // 3D Rotation Function
+        function rotate3D(x, y, z, rx, ry) {
+            // Rotation around X-axis
+            let y1 = y * Math.cos(rx) - z * Math.sin(rx);
+            let z1 = y * Math.sin(rx) + z * Math.cos(rx);
+
+            // Rotation around Y-axis
+            let x2 = x * Math.cos(ry) + z1 * Math.sin(ry);
+            let y2 = y1;
+            let z2 = -x * Math.sin(ry) + z1 * Math.cos(ry);
+
+            return { x: x2, y: y2, z: z2 };
+        }
 
         // Initialize the Graph (Called Once)
         function initializeGraph() {
@@ -141,39 +164,55 @@
                 g = svg.append("g")
                     .attr("transform", `translate(${width / 2},${height / 2})`);
 
-                // Add Axes
-                const axisGroup = g.append("g").attr("class", "axes");
+                // Define 3D Axes Endpoints
+                const axisLength = 50; // Increased length for better visibility
+                const axes = {
+                    x: { x: axisLength, y: 0, z: 0 },
+                    y: { x: 0, y: axisLength, z: 0 },
+                    z: { x: 0, y: 0, z: axisLength }
+                };
 
-                const axisLength = 10; // Adjusted for scale
+                // Store axes data for later use
+                g.append("g").attr("class", "axes").datum(axes);
+
+                // Create axis lines
+                const axisGroup = g.select(".axes");
+
                 // X-axis
                 axisGroup.append("line")
-                    .attr("class", "axis-line")
-                    .attr("x1", -axisLength).attr("y1", 0)
-                    .attr("x2", axisLength).attr("y2", 0);
-                axisGroup.append("text")
-                    .attr("class", "axis-label")
-                    .attr("x", axisLength + 5).attr("y", 3)
-                    .text("X");
+                    .attr("class", "axis-line axis-x")
+                    .attr("x1", 0).attr("y1", 0)
+                    .attr("x2", axes.x.x).attr("y2", axes.x.y)
+                    .style("stroke", "red");
 
                 // Y-axis
                 axisGroup.append("line")
-                    .attr("class", "axis-line")
-                    .attr("x1", 0).attr("y1", -axisLength)
-                    .attr("x2", 0).attr("y2", axisLength);
-                axisGroup.append("text")
-                    .attr("class", "axis-label")
-                    .attr("x", 3).attr("y", -axisLength - 5)
-                    .text("Y");
+                    .attr("class", "axis-line axis-y")
+                    .attr("x1", 0).attr("y1", 0)
+                    .attr("x2", axes.y.x).attr("y2", axes.y.y)
+                    .style("stroke", "green");
 
                 // Z-axis
                 axisGroup.append("line")
-                    .attr("class", "axis-line")
+                    .attr("class", "axis-line axis-z")
                     .attr("x1", 0).attr("y1", 0)
-                    .attr("x2", axisLength * Math.cos(Math.PI / 4)).attr("y2", -axisLength * Math.sin(Math.PI / 4));
+                    .attr("x2", axes.z.x).attr("y2", axes.z.y)
+                    .style("stroke", "blue");
+
+                // Add Axis Labels
                 axisGroup.append("text")
                     .attr("class", "axis-label")
-                    .attr("x", axisLength * Math.cos(Math.PI / 4) + 5)
-                    .attr("y", -axisLength * Math.sin(Math.PI / 4) - 5)
+                    .attr("x", axes.x.x + 10).attr("y", axes.x.y)
+                    .text("X");
+
+                axisGroup.append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", axes.y.x).attr("y", axes.y.y - 10)
+                    .text("Y");
+
+                axisGroup.append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", axes.z.x + 10).attr("y", axes.z.y)
                     .text("Z");
             }
 
@@ -224,9 +263,11 @@
             const cosY = Math.cos(ry);
             const sinY = Math.sin(ry);
 
+            // Rotate and project data points
             points.attr("transform", d => {
-                const x = d.x * cosY - d.z * sinY;
-                const y = d.y * cosX + (d.x * sinY + d.z * cosY) * sinX;
+                const rotated = rotate3D(d.x, d.y, d.z, rx, ry);
+                const x = rotated.x;
+                const y = rotated.y;
                 return `translate(${scale(x) + translation[0]},${scale(y) + translation[1]})`;
             });
 
@@ -236,8 +277,41 @@
                 return bz - az;
             });
 
-            // Update Axes Position
-            g.select(".axes").attr("transform", `translate(${translation[0]},${translation[1]}) rotate(${rotation[1] * 180 / Math.PI},0,0)`);
+            // Rotate and project axes
+            const axes = g.select(".axes").datum();
+            const rotatedAxes = {};
+
+            for (const [key, axis] of Object.entries(axes)) {
+                const rotated = rotate3D(axis.x, axis.y, axis.z, rx, ry);
+                rotatedAxes[key] = rotated;
+            }
+
+            // Update axis lines
+            g.select(".axis-x")
+                .attr("x2", scale(rotatedAxes.x.x))
+                .attr("y2", scale(rotatedAxes.x.y));
+
+            g.select(".axis-y")
+                .attr("x2", scale(rotatedAxes.y.x))
+                .attr("y2", scale(rotatedAxes.y.y));
+
+            g.select(".axis-z")
+                .attr("x2", scale(rotatedAxes.z.x))
+                .attr("y2", scale(rotatedAxes.z.y));
+
+            // Update axis labels
+            g.selectAll(".axis-label")
+                .data(["X", "Y", "Z"])
+                .attr("x", (d, i) => {
+                    if (d === "X") return scale(rotatedAxes.x.x) + 10;
+                    if (d === "Y") return scale(rotatedAxes.y.x);
+                    if (d === "Z") return scale(rotatedAxes.z.x) + 10;
+                })
+                .attr("y", (d, i) => {
+                    if (d === "X") return scale(rotatedAxes.x.y);
+                    if (d === "Y") return scale(rotatedAxes.y.y - 10);
+                    if (d === "Z") return scale(rotatedAxes.z.y);
+                });
         }
 
         // Setup User Interactions (Drag, Zoom, etc.)
