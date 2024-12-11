@@ -132,7 +132,7 @@
         let scale, svg, g, points;
         let rotation = [0, 0];
         let translation = [0, 0];
-        let zoomLevel = .25; // Adjusted initial zoom level
+        let zoomLevel = 3; // Adjusted initial zoom level
         let imageSize = 25;
         let imageSizeState = 'medium';
         let isMobile = 'ontouchstart' in window;
@@ -165,7 +165,7 @@
                     .attr("transform", `translate(${width / 2},${height / 2})`);
 
                 // Define 3D Axes Endpoints
-                const axisLength = 50; // Increased length for better visibility
+                const axisLength = 5; // Increased length for better visibility
                 const axes = {
                     x: { x: axisLength, y: 0, z: 0 },
                     y: { x: 0, y: axisLength, z: 0 },
